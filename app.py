@@ -35,7 +35,7 @@ def messages():
         logger.error(f"Error processing activity: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-@app.route("/")
+@app.route("/health")
 def health():
     logger.info("Health check")
     logger.info(f"App ID: {app_id[:5]}...")

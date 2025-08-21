@@ -1,6 +1,7 @@
 botbuilder-core
 botbuilder-schema
-flask
+Flask
 asyncio
 openai
 aiohttp
+gunicorn

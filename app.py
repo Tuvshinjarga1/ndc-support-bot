@@ -27,11 +27,18 @@ async def handle_bot_activity(turn_context: TurnContext):
 
 # Microsoft Bot Framework-ийн message receive endpoint
 @app.route("/api/messages", methods=["POST"])
-async def messages():
+def messages():
     activity = Activity().deserialize(request.json)
     auth_header = request.headers.get("Authorization", "")
+
     try:
-        await ADAPTER.process_activity(activity, auth_header, handle_bot_activity)
+        # Flask sync route дотроос async function-г ажиллуулах
+        import asyncio
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(
+            ADAPTER.process_activity(activity, auth_header, handle_bot_activity)
+        )
         return jsonify({"status": "success"})
     except Exception as e:
         logger.error(f"Error processing activity: {e}")

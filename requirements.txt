@@ -1,0 +1,6 @@
+botbuilder-core
+botbuilder-schema
+flask
+asyncio
+openai
+aiohttp

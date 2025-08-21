@@ -5,8 +5,8 @@ import logging
 from flask import Flask, request, jsonify
 
 #logging тохиргоо
-logging.basicConfig(level=logging.info)
-logger = logging.getlogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app_id = os.getenv("MICROSOFT_APP_ID")
 app_password = os.getenv("MICROSOFT_APP_PASSWORD")

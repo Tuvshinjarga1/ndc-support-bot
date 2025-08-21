@@ -35,5 +35,12 @@ def messages():
         logger.error(f"Error processing activity: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/")
+def health():
+    logger.info("Health check")
+    logger.info(f"App ID: {app_id[:5]}...")
+    logger.info(f"App password: {app_password[:5]}...")
+    return "OK"
+
 if __name__ == "__main__":
     app.run(port=8080)

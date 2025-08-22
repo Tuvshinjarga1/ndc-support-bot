@@ -5,6 +5,7 @@ import sys
 import traceback
 import uuid
 from datetime import datetime
+import logging
 from http import HTTPStatus
 
 from aiohttp import web
@@ -21,6 +22,7 @@ from bots import TeamsConversationBot
 from config import DefaultConfig
 
 CONFIG = DefaultConfig()
+logging.basicConfig(level=logging.INFO)
 
 # Create adapter.
 # See https://aka.ms/about-bot-adapter to learn more about how bots work.
@@ -70,12 +72,14 @@ BOT = TeamsConversationBot(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
 # Listen for incoming requests on /api/messages.
 async def messages(req: Request) -> Response:
     # Main bot message handler.
+    logging.info(f"Incoming headers: {dict(req.headers)}")
     if "application/json" in req.headers["Content-Type"]:
         body = await req.json()
     else:
         return Response(status=HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
 
     activity = Activity().deserialize(body)
+    logging.info(f"Activity type: {activity.type}, channel_id: {activity.channel_id}, service_url: {activity.service_url}")
     auth_header = req.headers["Authorization"] if "Authorization" in req.headers else ""
 
     response = await ADAPTER.process_activity(activity, auth_header, BOT.on_turn)

@@ -1,8 +1,4 @@
 botbuilder-core
 botbuilder-schema
-Flask
-asyncio
-openai
 aiohttp
-gunicorn
 python-dotenv

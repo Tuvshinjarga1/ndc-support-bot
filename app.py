@@ -23,6 +23,10 @@ from config import DefaultConfig
 
 CONFIG = DefaultConfig()
 logging.basicConfig(level=logging.INFO)
+logging.info(
+    f"Startup: APP_ID={'SET ' + str(CONFIG.APP_ID)[:10] + '...' if CONFIG.APP_ID else 'NOT SET'}, "
+    f"APP_PASSWORD={'SET' if bool(CONFIG.APP_PASSWORD) else 'NOT SET'}"
+)
 
 # Create adapter.
 # See https://aka.ms/about-bot-adapter to learn more about how bots work.

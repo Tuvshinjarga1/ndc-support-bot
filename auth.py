@@ -22,10 +22,19 @@ if not tenant_id:
 # Bot Framework Adapter тохиргоо
 SETTINGS = BotFrameworkAdapterSettings(app_id, app_password)
 
-# OAuth scope-г зөв тохируулах (tenant_id байвал ашиглах, үгүй бол common ашиглах)
-if tenant_id:
+# OAuth scope-г зөв тохируулах
+# Хэрэв tenant_id байвал түүнийг ашиглах, үгүй бол common ашиглах
+if tenant_id and tenant_id.strip():
     SETTINGS.oauth_scope = f"https://login.microsoftonline.com/{tenant_id}/.default"
 else:
     SETTINGS.oauth_scope = "https://login.microsoftonline.com/common/.default"
 
+# Authentication-г идэвхжүүлэх
 ADAPTER = BotFrameworkAdapter(SETTINGS)
+
+# Authentication error handler нэмэх
+async def on_turn_error(context, error):
+    print(f"Authentication error: {error}")
+    await context.send_activity("Уучлаарай, алдаа гарлаа. Дахин оролдоно уу.")
+
+ADAPTER.on_turn_error = on_turn_error

@@ -23,10 +23,19 @@ async def handle_bot_activity(turn_context: TurnContext):
 # Microsoft Bot Framework-ийн message receive endpoint
 @app.route("/api/messages", methods=["POST"])
 def messages():
-    activity = Activity().deserialize(request.json)
-    auth_header = request.headers.get("Authorization", "")
-
     try:
+        # Request-ийн мэдээллийг лог хийх
+        logger.info(f"Received request from: {request.remote_addr}")
+        logger.info(f"Authorization header present: {'Authorization' in request.headers}")
+        
+        activity = Activity().deserialize(request.json)
+        auth_header = request.headers.get("Authorization", "")
+        
+        # Activity-ийн мэдээллийг лог хийх
+        logger.info(f"Activity type: {activity.type}")
+        logger.info(f"Activity from: {activity.from_property.id if activity.from_property else 'None'}")
+        logger.info(f"Activity recipient: {activity.recipient.id if activity.recipient else 'None'}")
+
         # Flask sync route дотроос async function-г ажиллуулах
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -36,6 +45,7 @@ def messages():
         return jsonify({"status": "success"})
     except Exception as e:
         logger.error(f"Error processing activity: {e}")
+        logger.error(f"Error type: {type(e).__name__}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # Health check endpoint

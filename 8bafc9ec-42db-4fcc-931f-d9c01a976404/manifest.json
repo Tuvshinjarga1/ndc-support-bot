@@ -1,0 +1,50 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.22/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.22",
+  "version": "1.0.0",
+  "id": "8bafc9ec-42db-4fcc-931f-d9c01a976404",
+  "developer": {
+    "name": "FIBO Global Technology",
+    "websiteUrl": "https://www.fibo.global",
+    "privacyUrl": "https://privacy.microsoft.com/en-us/privacystatement",
+    "termsOfUseUrl": "https://www.microsoft.com/en-us/servicesagreement"
+  },
+  "name": {
+    "short": "PMT Bot",
+    "full": "PMT Request Management Bot"
+  },
+  "description": {
+    "short": "PMT Bot - Manage your leave and requests.",
+    "full": "PMT Bot helps you manage your leave requests, approvals and notifications inside Microsoft Teams."
+  },
+  "icons": {
+    "outline": "outline.png",
+    "color": "color.png"
+  },
+  "accentColor": "#FFFFFF",
+  "bots": [
+    {
+      "botId": "fb2475c5-8f82-4658-9420-3524d2963c77",
+      "scopes": ["personal", "team", "groupChat"],
+      "supportsFiles": true,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal"],
+          "commands": [
+            {
+              "title": "Чөлөө хүсэлт",
+              "description": "Чөлөө хүсэлтийн талаархи мэдээллийг аваарай."
+            },
+            {
+              "title": "Миний хүсэлтүүд",
+              "description": "Өөрийн бүх чөлөө хүсэлтээ харах."
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["www.fibo.global", "fibo.global"]
+}

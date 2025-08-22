@@ -3,20 +3,11 @@ import logging
 from flask import Flask, request, jsonify
 from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings, TurnContext
 from botbuilder.schema import Activity
-
+import asyncio
+from auth import ADAPTER
 # Лог тохиргоо
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Орчны хувьсагчуудаас App ID, Password авах
-app_id = os.getenv("MICROSOFT_APP_ID")
-app_password = os.getenv("MICROSOFT_APP_PASSWORD")
-
-logger.info(f"Bot starting app id: {app_id[:10]}..." if app_id else "No App ID configured")
-
-# Bot adapter тохиргоо
-SETTINGS = BotFrameworkAdapterSettings(app_id, app_password)
-ADAPTER = BotFrameworkAdapter(SETTINGS)
 
 app = Flask(__name__)
 
@@ -33,7 +24,6 @@ def messages():
 
     try:
         # Flask sync route дотроос async function-г ажиллуулах
-        import asyncio
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(

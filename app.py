@@ -1,10 +1,14 @@
 import os
 import logging
 from flask import Flask, request, jsonify
-from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings, TurnContext
+from botbuilder.core import TurnContext
 from botbuilder.schema import Activity
 import asyncio
+from dotenv import load_dotenv
 from auth import ADAPTER
+
+# Environment variable-уудыг уншиж авах
+load_dotenv()
 # Лог тохиргоо
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,4 +45,5 @@ def health():
     return jsonify({"status": "ok"})
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, debug=True)
+    port = int(os.getenv("PORT", 8080))
+    app.run(host="0.0.0.0", port=port, debug=True)

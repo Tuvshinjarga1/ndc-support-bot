@@ -6,24 +6,24 @@ from http import HTTPStatus
  
 
 from aiohttp import web
+from botbuilder.core.integration import aiohttp_error_middleware
+
+from bot import bot_app
 
 routes = web.RouteTableDef()
 
 @routes.post("/api/messages")
 async def on_messages(req: web.Request) -> web.Response:
-    try:
-        body = await req.json()
-    except Exception:
-        body = {}
-
-    text = body.get("text", "")
-    return web.json_response({"text": text}, status=HTTPStatus.OK)
+    res = await bot_app.process(req)
+    if res is not None:
+        return res
+    return web.Response(status=HTTPStatus.OK)
 
 @routes.get("/health")
 async def health_check(_req: web.Request) -> web.Response:
     return web.Response(status=HTTPStatus.OK, text="ok")
 
-app = web.Application()
+app = web.Application(middlewares=[aiohttp_error_middleware])
 app.add_routes(routes)
 
 if __name__ == "__main__":

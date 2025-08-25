@@ -1,108 +1,64 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
-
-import sys
-import traceback
-import uuid
-from datetime import datetime
-import logging
-from http import HTTPStatus
-
-from aiohttp import web
-from aiohttp.web import Request, Response, json_response
-from botbuilder.core import (
-    BotFrameworkAdapterSettings,
-    TurnContext,
-    BotFrameworkAdapter,
-)
-from botbuilder.core.integration import aiohttp_error_middleware
+from flask import Flask, request, jsonify
+from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings
 from botbuilder.schema import Activity, ActivityTypes
+import asyncio
+import logging
+import os
 
-from bots import TeamsConversationBot
-from config import DefaultConfig
+# Flask app үүсгэх
+app = Flask(__name__)
 
-CONFIG = DefaultConfig()
-logging.basicConfig(level=logging.INFO)
-logging.info(
-    f"Startup: APP_ID={'SET ' + str(CONFIG.APP_ID)[:10] + '...' if CONFIG.APP_ID else 'NOT SET'}, "
-    f"APP_PASSWORD={'SET' if bool(CONFIG.APP_PASSWORD) else 'NOT SET'}"
-)
-
-# Create adapter.
-# See https://aka.ms/about-bot-adapter to learn more about how bots work.
-SETTINGS = BotFrameworkAdapterSettings(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
+# Bot Framework Adapter үүсгэх
+SETTINGS = BotFrameworkAdapterSettings(os.getenv("MICROSOFT_APP_ID"), os.getenv("MICROSOFT_APP_PASSWORD"))
 ADAPTER = BotFrameworkAdapter(SETTINGS)
 
+# Logging тохируулах
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Catch-all for errors.
-async def on_error(context: TurnContext, error: Exception):
-    # This check writes out errors to console log .vs. app insights.
-    # NOTE: In production environment, you should consider logging this to Azure
-    #       application insights.
-    print(f"\n [on_turn_error] unhandled error: {error}", file=sys.stderr)
-    traceback.print_exc()
+@app.route("/api/messages", methods=["POST"])
+def process_messages():
+    try:
+        logger.info("Received message request")
+        
+        if not request.is_json:
+            return jsonify({"error": "Content-Type must be application/json"}), 400
 
-    # Send a message to the user
-    await context.send_activity("The bot encountered an error or bug.")
-    await context.send_activity(
-        "To continue to run this bot, please fix the bot source code."
-    )
-    # Send a trace activity if we're talking to the Bot Framework Emulator
-    if context.activity.channel_id == "emulator":
-        # Create a trace activity that contains the error object
-        trace_activity = Activity(
-            label="TurnError",
-            name="on_turn_error Trace",
-            timestamp=datetime.utcnow(),
-            type=ActivityTypes.trace,
-            value=f"{error}",
-            value_type="https://www.botframework.com/schemas/error",
-        )
-        # Send a trace activity, which will be displayed in Bot Framework Emulator
-        await context.send_activity(trace_activity)
+        body = request.get_json()
+        if not body:
+            return jsonify({"error": "Request body is required"}), 400
 
+        # Activity deserialize хийх
+        activity = Activity().deserialize(body)
+        logger.info(f"Activity type: {activity.type}, text: {activity.text}")
 
-ADAPTER.on_turn_error = on_error
+        async def logic(context):
+            try:
+                if activity.type == ActivityTypes.message:
+                    # Хэрэглэгчийн мессежийг echo хийх
+                    user_text = activity.text or "No text provided"
+                    await context.send_activity(f"Таны мессежийг хүлээн авлаа: {user_text}")
+                    logger.info(f"Echo response sent for: {user_text}")
+                else:
+                    logger.info(f"Non-message activity type: {activity.type}")
+                    
+            except Exception as e:
+                logger.error(f"Error in logic function: {str(e)}")
+                await context.send_activity(f"Серверийн алдаа: {str(e)}")
 
-# If the channel is the Emulator, and authentication is not in use, the AppId will be null.
-# We generate a random AppId for this case only. This is not required for production, since
-# the AppId will have a value.
-APP_ID = SETTINGS.app_id if SETTINGS.app_id else uuid.uuid4()
+        # Bot Framework Adapter ашиглаж мессежийг боловсруулах
+        auth_header = request.headers.get('Authorization', '')
+        asyncio.run(ADAPTER.process_activity(activity, auth_header, logic))
+        
+        return jsonify({"status": "success"}), 200
+        
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
 
-# Create the Bot
-BOT = TeamsConversationBot(CONFIG.APP_ID, CONFIG.APP_PASSWORD)
-
-
-# Listen for incoming requests on /api/messages.
-async def messages(req: Request) -> Response:
-    # Main bot message handler.
-    logging.info(f"Incoming headers: {dict(req.headers)}")
-    if "application/json" in req.headers["Content-Type"]:
-        body = await req.json()
-    else:
-        return Response(status=HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
-
-    activity = Activity().deserialize(body)
-    logging.info(f"Activity type: {activity.type}, channel_id: {activity.channel_id}, service_url: {activity.service_url}")
-    auth_header = req.headers["Authorization"] if "Authorization" in req.headers else ""
-
-    response = await ADAPTER.process_activity(activity, auth_header, BOT.on_turn)
-    if response:
-        return json_response(data=response.body, status=response.status)
-    return Response(status=HTTPStatus.OK)
-
-
-APP = web.Application(middlewares=[aiohttp_error_middleware])
-APP.router.add_post("/api/messages", messages)
-
-# Health check endpoint
-async def health(_: Request) -> Response:
-    return json_response({"status": "ok"})
-
-APP.router.add_get("/health", health)
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify({"status": "Bot is running"}), 200
 
 if __name__ == "__main__":
-    try:
-        web.run_app(APP, host="0.0.0.0", port=CONFIG.PORT)
-    except Exception as error:
-        raise error
+    app.run(debug=True, port=8080)

@@ -3,6 +3,7 @@ Copyright (c) Microsoft Corporation. All rights reserved.
 Licensed under the MIT License.
 """
 from http import HTTPStatus
+ 
 
 from aiohttp import web
 from botbuilder.core.integration import aiohttp_error_middleware
@@ -20,10 +21,12 @@ async def on_messages(req: web.Request) -> web.Response:
 
     return web.Response(status=HTTPStatus.OK)
 
+@routes.get("/health")
+async def health_check(_req: web.Request) -> web.Response:
+    return web.Response(status=HTTPStatus.OK, text="ok")
+
 app = web.Application(middlewares=[aiohttp_error_middleware])
 app.add_routes(routes)
 
-from config import Config
-
 if __name__ == "__main__":
-    web.run_app(app, host="localhost", port=Config.PORT)
+    web.run_app(app, host="0.0.0.0", port=8080)

@@ -1,64 +1,29 @@
-from flask import Flask, request, jsonify
-from botbuilder.core import BotFrameworkAdapter, BotFrameworkAdapterSettings
-from botbuilder.schema import Activity, ActivityTypes
-import asyncio
-import logging
-import os
+"""
+Copyright (c) Microsoft Corporation. All rights reserved.
+Licensed under the MIT License.
+"""
+from http import HTTPStatus
 
-# Flask app үүсгэх
-app = Flask(__name__)
+from aiohttp import web
+from botbuilder.core.integration import aiohttp_error_middleware
 
-# Bot Framework Adapter үүсгэх
-SETTINGS = BotFrameworkAdapterSettings(os.getenv("MICROSOFT_APP_ID"), os.getenv("MICROSOFT_APP_PASSWORD"))
-ADAPTER = BotFrameworkAdapter(SETTINGS)
+from bot import bot_app
 
-# Logging тохируулах
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+routes = web.RouteTableDef()
 
-@app.route("/api/messages", methods=["POST"])
-def process_messages():
-    try:
-        logger.info("Received message request")
-        
-        if not request.is_json:
-            return jsonify({"error": "Content-Type must be application/json"}), 400
+@routes.post("/api/messages")
+async def on_messages(req: web.Request) -> web.Response:
+    res = await bot_app.process(req)
 
-        body = request.get_json()
-        if not body:
-            return jsonify({"error": "Request body is required"}), 400
+    if res is not None:
+        return res
 
-        # Activity deserialize хийх
-        activity = Activity().deserialize(body)
-        logger.info(f"Activity type: {activity.type}, text: {activity.text}")
+    return web.Response(status=HTTPStatus.OK)
 
-        async def logic(context):
-            try:
-                if activity.type == ActivityTypes.message:
-                    # Хэрэглэгчийн мессежийг echo хийх
-                    user_text = activity.text or "No text provided"
-                    await context.send_activity(f"Таны мессежийг хүлээн авлаа: {user_text}")
-                    logger.info(f"Echo response sent for: {user_text}")
-                else:
-                    logger.info(f"Non-message activity type: {activity.type}")
-                    
-            except Exception as e:
-                logger.error(f"Error in logic function: {str(e)}")
-                await context.send_activity(f"Серверийн алдаа: {str(e)}")
+app = web.Application(middlewares=[aiohttp_error_middleware])
+app.add_routes(routes)
 
-        # Bot Framework Adapter ашиглаж мессежийг боловсруулах
-        auth_header = request.headers.get('Authorization', '')
-        asyncio.run(ADAPTER.process_activity(activity, auth_header, logic))
-        
-        return jsonify({"status": "success"}), 200
-        
-    except Exception as e:
-        logger.error(f"Unexpected error: {str(e)}")
-        return jsonify({"error": f"Internal server error: {str(e)}"}), 500
-
-@app.route("/", methods=["GET"])
-def health_check():
-    return jsonify({"status": "Bot is running"}), 200
+from config import Config
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8080, host="0.0.0.0")
+    web.run_app(app, host="localhost", port=Config.PORT)

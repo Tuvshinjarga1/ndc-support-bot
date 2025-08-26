@@ -1,70 +1,66 @@
 import os
 import sys
+import json
 import traceback
+from dataclasses import asdict
 
-from botbuilder.core import (
-    BotFrameworkAdapterSettings,
-    TurnContext,
-    BotFrameworkAdapter,
-)
-from botbuilder.schema import Activity, ActivityTypes
+from botbuilder.core import MemoryStorage, TurnContext
+from teams import Application, ApplicationOptions, TeamsAdapter
+from teams.ai import AIOptions
+from teams.ai.models import AzureOpenAIModelOptions, OpenAIModel, OpenAIModelOptions
+from teams.ai.planners import ActionPlanner, ActionPlannerOptions
+from teams.ai.prompts import PromptManager, PromptManagerOptions
+from teams.state import TurnState
+from teams.feedback_loop_data import FeedbackLoopData
 
 from config import Config
 
 config = Config()
 
-# Create adapter
-adapter_settings = BotFrameworkAdapterSettings(
-    app_id=config.APP_ID,
-    app_password=config.APP_PASSWORD
-)
-adapter = BotFrameworkAdapter(adapter_settings)
+# Create AI components
+model: OpenAIModel
 
-# Error handler
+model = OpenAIModel(
+    OpenAIModelOptions(
+        api_key=config.OPENAI_API_KEY,
+        default_model=config.OPENAI_MODEL_NAME,
+    )
+)
+
+prompts = PromptManager(PromptManagerOptions(prompts_folder=f"{os.getcwd()}/prompts"))
+
+planner = ActionPlanner(
+    ActionPlannerOptions(
+        model=model,
+        prompts=prompts,
+        default_prompt="chat",
+        enable_feedback_loop=True,
+    )
+)
+
+# Define storage and application
+storage = MemoryStorage()
+bot_app = Application[TurnState](
+    ApplicationOptions(
+        bot_app_id=config.APP_ID,
+        storage=storage,
+        adapter=TeamsAdapter(config),
+        ai=AIOptions(planner=planner, enable_feedback_loop=True),
+    )
+)
+
+@bot_app.error
 async def on_error(context: TurnContext, error: Exception):
+    # This check writes out errors to console log .vs. app insights.
+    # NOTE: In production environment, you should consider logging this to Azure
+    #       application insights.
     print(f"\n [on_turn_error] unhandled error: {error}", file=sys.stderr)
     traceback.print_exc()
-    
-    # Check if it's an authentication error
-    if "AADSTS700016" in str(error) or "unauthorized_client" in str(error):
-        print("❌ Ботын тохиргооны алдаа: BOT_ID эсвэл BOT_PASSWORD буруу байна")
-        print("📝 .env файлд зөв тохиргоог оруулна уу")
-    else:
-        await context.send_activity("The bot encountered an error or bug.")
 
-adapter.on_turn_error = on_error
+    # Send a message to the user
+    await context.send_activity("The agent encountered an error or bug.")
 
-# Bot logic
-async def on_message_activity(context: TurnContext):
-    """Handle message activities - simple echo bot."""
-    try:
-        # Simple echo response
-        user_message = context.activity.text
-        echo_response = f"Echo: {user_message}"
-        
-        # Send echo response
-        await context.send_activity(echo_response)
-        print(f"📝 Хүлээн авсан: {user_message}")
-        print(f"🔄 Илгээсэн: {echo_response}")
-    except Exception as e:
-        print(f"❌ Мессеж илгээхэд алдаа гарлаа: {e}")
-
-async def on_members_added_activity(members_added, context: TurnContext):
-    """Handle members added activities."""
-    try:
-        for member in members_added:
-            if member.id != context.activity.recipient.id:
-                await context.send_activity("Hello! I'm your echo bot. Send me a message and I'll echo it back to you!")
-    except Exception as e:
-        print(f"❌ Members added activity-д алдаа гарлаа: {e}")
-
-async def on_turn(context: TurnContext):
-    """Handle turn logic."""
-    try:
-        if context.activity.type == ActivityTypes.message:
-            await on_message_activity(context)
-        elif context.activity.type == ActivityTypes.conversation_update:
-            if context.activity.members_added:
-                await on_members_added_activity(context.activity.members_added, context)
-    except Exception as e:
-        print(f"❌ Turn processing-д алдаа гарлаа: {e}")
+@bot_app.feedback_loop()
+async def feedback_loop(_context: TurnContext, _state: TurnState, feedback_loop_data: FeedbackLoopData):
+    # Add custom feedback process logic here.
+    print(f"Your feedback is:\n{json.dumps(asdict(feedback_loop_data), indent=4)}")

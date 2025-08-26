@@ -4,7 +4,6 @@ Licensed under the MIT License.
 """
 from http import HTTPStatus
 import logging
-import json
 
 from aiohttp import web
 from botbuilder.core.integration import aiohttp_error_middleware
@@ -23,27 +22,12 @@ routes = web.RouteTableDef()
 
 @routes.post("/api/messages")
 async def on_messages(req: web.Request) -> web.Response:
-    try:
-        # JSON өгөгдлийг унших
-        data = await req.json()
-        
-        # Хэрэглэгчийн мессежийг авах
-        user_message = data.get('message', '')
-        
-        # Echo хариу үүсгэх
-        echo_response = {
-            'text': f"Таны мессеж: {user_message}",
-        }
-        
-        return web.json_response(echo_response, status=HTTPStatus.OK)
-        
-    except Exception as e:
-        logging.error(f"Алдаа гарлаа: {str(e)}")
-        return web.Response(status=HTTPStatus.INTERNAL_SERVER_ERROR)
+    res = await bot_app.process(req)
+    
+    if res is not None:
+        return res
 
-@routes.get("/")
-async def home(req: web.Request) -> web.Response:
-    return web.Response(text="Echo Bot ажиллаж байна! /api/messages endpoint-д POST хүсэлт илгээнэ үү.", content_type="text/plain")
+    return web.Response(status=HTTPStatus.OK)
 
 app = web.Application(middlewares=[aiohttp_error_middleware])
 app.add_routes(routes)

@@ -22,17 +22,17 @@ bot_app = Application[TurnState](
     )
 )
 
-# @bot_app.message("/echo")
-# async def on_message(context: TurnContext, state: TurnState):
-#     """Энгийн echo bot - хэрэглэгчийн мессежийг буцаан илгээнэ"""
-#     user_message = context.activity.text
+@bot_app.message("/echo")
+async def on_message(context: TurnContext, state: TurnState):
+    """Энгийн echo bot - хэрэглэгчийн мессежийг буцаан илгээнэ"""
+    user_message = context.activity.text
     
-#     # Echo хариу үүсгэх
-#     echo_response = f"Таны мессеж: {user_message}"
+    # Echo хариу үүсгэх
+    echo_response = f"Таны мессеж: {user_message}"
     
-#     await context.send_activity(echo_response)
+    await context.send_activity(echo_response)
 
-@bot_app.message()
+@bot_app.message("")
 async def on_message_default(context: TurnContext, state: TurnState):
     """Бүх мессежид хариулах default handler"""
     user_message = context.activity.text

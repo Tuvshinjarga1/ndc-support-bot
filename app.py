@@ -6,10 +6,17 @@ from http import HTTPStatus
 import logging
 
 from aiohttp import web
+from aiohttp.web import Request, Response, json_response
+from botbuilder.core import (
+    BotFrameworkAdapterSettings,
+    TurnContext,
+    BotFrameworkAdapter,
+)
 from botbuilder.core.integration import aiohttp_error_middleware
-from config import Config
+from botbuilder.schema import Activity, ActivityTypes
 
-from bot import bot_app
+from config import Config
+from bot import adapter, on_turn
 
 # Validate tenant configuration when running as SingleTenant
 _config = Config()
@@ -22,12 +29,23 @@ routes = web.RouteTableDef()
 
 @routes.post("/api/messages")
 async def on_messages(req: web.Request) -> web.Response:
-    res = await bot_app.process(req)
+    """Handle incoming messages."""
+    body = await req.json()
+    activity = Activity().deserialize(body)
     
-    if res is not None:
-        return res
+    auth_header = req.headers.get("Authorization", "")
+    
+    try:
+        response = await adapter.process_activity(activity, auth_header, on_turn)
+        return json_response(data=response.body, status=response.status)
+    except Exception as e:
+        logging.error(f"Error processing activity: {e}")
+        return web.Response(status=HTTPStatus.INTERNAL_SERVER_ERROR)
 
-    return web.Response(status=HTTPStatus.OK)
+@routes.get("/api/health")
+async def health_check(req: web.Request) -> web.Response:
+    """Health check endpoint."""
+    return web.Response(text="Bot is running", status=HTTPStatus.OK)
 
 app = web.Application(middlewares=[aiohttp_error_middleware])
 app.add_routes(routes)

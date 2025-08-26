@@ -1,5 +1,5 @@
 python-dotenv
-aiohttp>=3.8.0
-botbuilder-core>=4.20.0
-botbuilder-integration-aiohttp>=4.20.0
-botframework-connector>=4.20.0
+aiohttp
+botbuilder-core
+botbuilder-integration-aiohttp
+botframework-connector

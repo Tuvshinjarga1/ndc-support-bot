@@ -38,7 +38,7 @@ async def on_message_default(context: TurnContext, state: TurnState):
     user_message = context.activity.text
     
     # Echo хариу үүсгэх
-    echo_response = f"Echo: {user_message}"
+    echo_response = f"ticket echo: {user_message}"
     
     await context.send_activity(echo_response)
 
